@@ -99,22 +99,33 @@ LANES = [145, 205, 265, 325, 385, 445, 505, 560]
 class EnemyCar:
     def __init__(self, images: list):
         self.images = images
-        self._respawn(5.0)
+        self.x = 0.0
+        self.y = 0.0
+        self.speed = 5.0
+        self.image = images[0]
 
-    def _respawn(self, base_speed: float) -> None:
+    def _respawn(self, base_speed: float, others: list = None) -> None:
         self.image = choice(self.images)
         self.x = float(choice(LANES))
-        self.y = float(-randint(100, 800))
         self.speed = base_speed + uniform(-0.4, 1.6)
+        candidate = -randint(80, 300)
+        if others:
+            same_lane = [e for e in others if e is not self and abs(e.x - self.x) < 5]
+            for _ in range(20):
+                if not any(abs(candidate - e.y) < CAR_H + 20 for e in same_lane):
+                    break
+                candidate -= CAR_H + randint(20, 50)
+        self.y = float(candidate)
 
     @property
     def rect(self) -> pygame.Rect:
-        return pygame.Rect(int(self.x), int(self.y), CAR_W, CAR_H)
+        mx, my = 12, 10
+        return pygame.Rect(int(self.x) + mx, int(self.y) + my, CAR_W - mx * 2, CAR_H - my * 2)
 
-    def update(self, base_speed: float) -> None:
+    def update(self, base_speed: float, others: list) -> None:
         self.y += self.speed
         if self.y > SCREEN_H + CAR_H:
-            self._respawn(base_speed)
+            self._respawn(base_speed, others)
 
     def draw(self, surf: pygame.Surface) -> None:
         surf.blit(self.image, (int(self.x), int(self.y)))
@@ -220,7 +231,11 @@ class Game:
 
     def _init_game(self):
         self.player     = Player(self.player_img)
-        self.enemies    = [EnemyCar(self.enemy_imgs) for _ in range(10)]
+        self.enemies = []
+        for _ in range(10):
+            e = EnemyCar(self.enemy_imgs)
+            e._respawn(5.0, self.enemies)
+            self.enemies.append(e)
         self.particles  = []
         self.speed_lines = [SpeedLine.random() for _ in range(14)]
         self.ticks      = 0
@@ -299,7 +314,9 @@ class Game:
             oy = randint(-7, 7)
 
         for enemy in self.enemies:
-            enemy.update(self.base_speed)
+            enemy.update(self.base_speed, self.enemies)
+
+        for enemy in self.enemies:
             if enemy.rect.colliderect(self.player.rect):
                 if self.player.hit():
                     explode(self.particles, self.player.x + CAR_W // 2, self.player.y + CAR_H // 2)
