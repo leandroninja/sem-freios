@@ -1,4 +1,4 @@
-# Corrida Maluca
+# Sem Freios
 
 Jogo de corrida em Python onde voce controla um carro e precisa desviar do trafego pelo maior tempo possivel.
 
@@ -41,7 +41,7 @@ python jogo.py
 ## Estrutura
 
 ```
-jogo/
+sem-freios/
 ├── jogo.py          # Codigo principal
 ├── highscore.json   # Recorde (gerado automaticamente)
 ├── pista.png        # Fundo da pista
