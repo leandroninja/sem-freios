@@ -2,6 +2,8 @@
 
 Jogo de corrida em Python onde voce controla um carro e precisa desviar do trafego pelo maior tempo possivel.
 
+![Tela inicial](screenshot.png)
+
 ## Como jogar
 
 ```bash

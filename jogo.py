@@ -205,7 +205,7 @@ class Game:
 
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-        pygame.display.set_caption("Corrida Maluca")
+        pygame.display.set_caption("Sem Freios")
         self.clock  = pygame.time.Clock()
         self._load_assets()
         self.highscore = load_highscore()
@@ -228,6 +228,22 @@ class Game:
         self.font_sm = pygame.font.SysFont("Arial",       17)
 
         self.overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+
+        # Overlay degradê pré-calculado para o menu
+        self.menu_overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for _row in range(SCREEN_H):
+            _a = int(80 + 155 * _row / SCREEN_H)
+            pygame.draw.line(self.menu_overlay, (0, 0, 0, _a), (0, _row), (SCREEN_W, _row))
+
+        # Carros e linhas animados no menu
+        self.menu_cars = []
+        for _ in range(6):
+            mc = EnemyCar(self.enemy_imgs)
+            mc.x = float(choice(LANES))
+            mc.y = float(randint(-500, 0))
+            mc.speed = uniform(3.5, 6.0)
+            self.menu_cars.append(mc)
+        self.menu_lines = [SpeedLine.random() for _ in range(18)]
 
     def _init_game(self):
         self.player     = Player(self.player_img)
@@ -285,17 +301,50 @@ class Game:
 
     # ── Menu ──────────────────────────────────────────────────────────────────
     def _menu(self):
-        self._scroll_bg(2.0)
-        self.overlay.fill((0, 0, 0, 155))
-        self.screen.blit(self.overlay, (0, 0))
+        self._scroll_bg(4.5)
 
-        draw_text(self.screen, "CORRIDA MALUCA",              self.font_xl, YELLOW, SCREEN_W//2, 145, center=True)
-        draw_text(self.screen, "Desvie do trafego!",          self.font_md, WHITE,  SCREEN_W//2, 228, center=True)
-        draw_text(self.screen, f"Recorde: {self.highscore}s", self.font_md, ORANGE, SCREEN_W//2, 272, center=True)
-        draw_text(self.screen, "Setas: mover  |  ESC: pausar", self.font_sm, GRAY, SCREEN_W//2, 334, center=True)
+        # Carros animados no fundo
+        for mc in self.menu_cars:
+            mc.y += mc.speed
+            if mc.y > SCREEN_H + CAR_H:
+                mc.x     = float(choice(LANES))
+                mc.y     = float(randint(-400, -CAR_H))
+                mc.speed = uniform(3.5, 6.0)
+                mc.image = choice(self.enemy_imgs)
+            mc.draw(self.screen)
 
-        if (pygame.time.get_ticks() // 480) % 2 == 0:
-            draw_text(self.screen, "ENTER ou ESPACO para jogar", self.font_lg, GREEN, SCREEN_W//2, 430, center=True)
+        # Linhas de velocidade
+        self.menu_lines = [sl for sl in self.menu_lines if sl.update()]
+        while len(self.menu_lines) < 18:
+            self.menu_lines.append(SpeedLine.random())
+        for sl in self.menu_lines:
+            sl.draw(self.screen, 65)
+
+        # Carro do jogador parado na base
+        self.screen.blit(self.player_img, (SCREEN_W // 2 - CAR_W // 2, SCREEN_H - CAR_H - 20))
+
+        # Overlay degradê
+        self.screen.blit(self.menu_overlay, (0, 0))
+
+        # Título com cor pulsante
+        t_ms  = pygame.time.get_ticks()
+        pulse = abs((t_ms % 1800) / 900.0 - 1.0)
+        tc    = (255, int(180 + 75 * pulse), int(60 * pulse))
+        draw_text(self.screen, "SEM FREIOS", self.font_xl, tc, SCREEN_W // 2, 130, center=True)
+
+        # Painel de informações
+        pw, ph = 430, 180
+        panel  = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 130))
+        pygame.draw.rect(panel, (255, 200, 50, 120), (0, 0, pw, ph), 2, border_radius=10)
+        self.screen.blit(panel, (SCREEN_W // 2 - pw // 2, 200))
+
+        draw_text(self.screen, "Desvie do trafego!",           self.font_md, WHITE,  SCREEN_W // 2, 220, center=True)
+        draw_text(self.screen, f"Recorde: {self.highscore}s",  self.font_md, ORANGE, SCREEN_W // 2, 263, center=True)
+        draw_text(self.screen, "Setas: mover  |  ESC: pausar", self.font_sm, GRAY,   SCREEN_W // 2, 328, center=True)
+
+        if (t_ms // 500) % 2 == 0:
+            draw_text(self.screen, "ENTER ou ESPACO para jogar", self.font_lg, GREEN, SCREEN_W // 2, 430, center=True)
 
     # ── Jogando ───────────────────────────────────────────────────────────────
     def _playing(self):
